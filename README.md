@@ -6,3 +6,6 @@ This extension is mantained by me after dismission by tachiyomi-extensions's dev
 2. Run Sync Project with Gradle Files<br/>
 3. Build the extension<br/>
 4. Enjoy!
+
+# Install APK
+Download APK and install it :)
