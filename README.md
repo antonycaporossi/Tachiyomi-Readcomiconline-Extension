@@ -8,4 +8,4 @@ This extension is mantained by me after dismission by tachiyomi-extensions's dev
 4. Enjoy!
 
 # Install APK
-Download APK and install it :)
+[Download latest APK](https://github.com/antonycaporossi/Tachiyomi-Readcomiconline-Extension/releases/latest) and install it :)
