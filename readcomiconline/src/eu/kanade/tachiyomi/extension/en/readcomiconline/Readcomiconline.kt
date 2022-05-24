@@ -5,7 +5,6 @@ import android.content.SharedPreferences
 import android.util.Base64
 import android.util.Log
 import eu.kanade.tachiyomi.network.GET
-import eu.kanade.tachiyomi.network.POST
 import eu.kanade.tachiyomi.source.ConfigurableSource
 import eu.kanade.tachiyomi.source.model.Filter
 import eu.kanade.tachiyomi.source.model.FilterList
@@ -13,8 +12,8 @@ import eu.kanade.tachiyomi.source.model.Page
 import eu.kanade.tachiyomi.source.model.SChapter
 import eu.kanade.tachiyomi.source.model.SManga
 import eu.kanade.tachiyomi.source.online.ParsedHttpSource
-import okhttp3.FormBody
 import okhttp3.Headers
+import okhttp3.HttpUrl.Companion.toHttpUrlOrNull
 import okhttp3.OkHttpClient
 import okhttp3.Request
 import org.jsoup.nodes.Document
@@ -73,17 +72,34 @@ class Readcomiconline : ConfigurableSource, ParsedHttpSource() {
     override fun latestUpdatesNextPageSelector(): String = "ul.pager > li > a:contains(Next)"
 
     override fun searchMangaRequest(page: Int, query: String, filters: FilterList): Request {
-        val form = FormBody.Builder().apply {
-            add("comicName", query)
+        val url = "$baseUrl/AdvanceSearch".toHttpUrlOrNull()!!.newBuilder()
+        val genreToInclude = mutableListOf<String>()
+        val genreToExclude = mutableListOf<String>()
+        for (filter in if (filters.isEmpty()) getFilterList() else filters) {
+            when (filter) {
+                is Status -> {
+                    val status = when (filter.state) {
+                        Filter.TriState.STATE_INCLUDE -> "Completed"
+                        Filter.TriState.STATE_EXCLUDE -> "Ongoing"
+                        else -> ""
+                    }
+                    url.addQueryParameter("status", status)
+                }
 
-            for (filter in if (filters.isEmpty()) getFilterList() else filters) {
-                when (filter) {
-                    is Status -> add("status", arrayOf("", "Completed", "Ongoing")[filter.state])
-                    is GenreList -> filter.state.forEach { genre -> add("genres", genre.state.toString()) }
+                is GenreList -> filter.state.forEach { genre ->
+                    when (genre.state) {
+                        Filter.TriState.STATE_INCLUDE -> genreToInclude.add(genre.id)
+                        Filter.TriState.STATE_EXCLUDE -> genreToExclude.add(genre.id)
+                    }
                 }
             }
         }
-        return POST("$baseUrl/AdvanceSearch", headers, form.build())
+
+        url.addQueryParameter("comicName", query)
+        if (genreToInclude.isNotEmpty()) url.addQueryParameter("ig", genreToInclude.joinToString(","))
+        if (genreToExclude.isNotEmpty()) url.addQueryParameter("eg", genreToExclude.joinToString(","))
+
+        return GET(url.toString(), headers)
     }
 
     override fun searchMangaSelector() = popularMangaSelector()
@@ -160,12 +176,12 @@ class Readcomiconline : ConfigurableSource, ParsedHttpSource() {
 
         val imagePath = imagePathResult.getOrNull()
             ?: throw Exception("Failed to decrypt the image URL.")
-        
+
         return GET("https://2.bp.blogspot.com/$imagePath")
     }
 
     private class Status : Filter.TriState("Completed")
-    private class Genre(name: String) : Filter.TriState(name)
+    private class Genre(name: String, val id: String = name) : Filter.TriState(name)
     private class GenreList(genres: List<Genre>) : Filter.Group<Genre>("Genres", genres)
 
     override fun getFilterList() = FilterList(
@@ -176,54 +192,54 @@ class Readcomiconline : ConfigurableSource, ParsedHttpSource() {
     // $("a[name=\"aGenre\"]").map((i,el) => `Genre("${$(el).text().trim()}", ${i})`).get().join(',\n')
     // on https://readcomiconline.li/AdvanceSearch
     private fun getGenreList() = listOf(
-        Genre("Action"),
-        Genre("Adventure"),
-        Genre("Anthology"),
-        Genre("Anthropomorphic"),
-        Genre("Biography"),
-        Genre("Children"),
-        Genre("Comedy"),
-        Genre("Crime"),
-        Genre("Drama"),
-        Genre("Family"),
-        Genre("Fantasy"),
-        Genre("Fighting"),
-        Genre("Graphic Novels"),
-        Genre("Historical"),
-        Genre("Horror"),
-        Genre("Leading Ladies"),
-        Genre("LGBTQ"),
-        Genre("Literature"),
-        Genre("Manga"),
-        Genre("Martial Arts"),
-        Genre("Mature"),
-        Genre("Military"),
-        Genre("Movies & TV"),
-        Genre("Music"),
-        Genre("Mystery"),
-        Genre("Mythology"),
-        Genre("Personal"),
-        Genre("Political"),
-        Genre("Post-Apocalyptic"),
-        Genre("Psychological"),
-        Genre("Pulp"),
-        Genre("Religious"),
-        Genre("Robots"),
-        Genre("Romance"),
-        Genre("School Life"),
-        Genre("Sci-Fi"),
-        Genre("Slice of Life"),
-        Genre("Sport"),
-        Genre("Spy"),
-        Genre("Superhero"),
-        Genre("Supernatural"),
-        Genre("Suspense"),
-        Genre("Thriller"),
-        Genre("Vampires"),
-        Genre("Video Games"),
-        Genre("War"),
-        Genre("Western"),
-        Genre("Zombies")
+        Genre("Action", "1"),
+        Genre("Adventure", "2"),
+        Genre("Anthology", "38"),
+        Genre("Anthropomorphic", "46"),
+        Genre("Biography", "41"),
+        Genre("Children", "49"),
+        Genre("Comedy", "3"),
+        Genre("Crime", "17"),
+        Genre("Drama", "19"),
+        Genre("Family", "25"),
+        Genre("Fantasy", "20"),
+        Genre("Fighting", "31"),
+        Genre("Graphic-Novels", "5"),
+        Genre("Historical", "28"),
+        Genre("Horror", "15"),
+        Genre("Leading-Ladies", "35"),
+        Genre("LGBTQ", "51"),
+        Genre("Literature", "44"),
+        Genre("Manga", "40"),
+        Genre("Martial-Arts", "4"),
+        Genre("Mature", "8"),
+        Genre("Military", "33"),
+        Genre("Movies-TV", "47"),
+        Genre("Music", "55"),
+        Genre("Mystery", "23"),
+        Genre("Mythology", "21"),
+        Genre("Personal", "48"),
+        Genre("Political", "42"),
+        Genre("Post-Apocalyptic", "43"),
+        Genre("Psychological", "27"),
+        Genre("Pulp", "39"),
+        Genre("Religious", "53"),
+        Genre("Robots", "9"),
+        Genre("Romance", "32"),
+        Genre("School-Life", "52"),
+        Genre("Sci-Fi", "16"),
+        Genre("Slice-of-Life", "50"),
+        Genre("Sport", "54"),
+        Genre("Spy", "30"),
+        Genre("Superhero", "22"),
+        Genre("Supernatural", "24"),
+        Genre("Suspense", "29"),
+        Genre("Thriller", "18"),
+        Genre("Vampires", "34"),
+        Genre("Video-Games", "37"),
+        Genre("War", "26"),
+        Genre("Western", "45"),
+        Genre("Zombies", "36")
     )
     // Preferences Code
 
