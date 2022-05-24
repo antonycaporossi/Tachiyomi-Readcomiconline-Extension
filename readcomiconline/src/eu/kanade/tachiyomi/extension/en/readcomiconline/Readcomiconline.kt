@@ -173,7 +173,7 @@ class Readcomiconline : ConfigurableSource, ParsedHttpSource() {
         GenreList(getGenreList())
     )
 
-    // $("select[name=\"genres\"]").map((i,el) => `Genre("${$(el).next().text().trim()}", ${i})`).get().join(',\n')
+    // $("a[name=\"aGenre\"]").map((i,el) => `Genre("${$(el).text().trim()}", ${i})`).get().join(',\n')
     // on https://readcomiconline.li/AdvanceSearch
     private fun getGenreList() = listOf(
         Genre("Action"),
