@@ -161,17 +161,19 @@ class Readcomiconline : ConfigurableSource, ParsedHttpSource() {
             return super.imageRequest(page)
         }
 
-        val scrambledUrl = page.imageUrl!!
+        val scrambledUrl = page.imageUrl!!.replace("_x236", "d").replace("_x945", "g")
+        val x = scrambledUrl.substring(scrambledUrl.indexOf("?")) [0]
         val containsS0 = scrambledUrl.contains("=s0")
+        val containsS0_v2 = scrambledUrl.contains("=s0?")
         val imagePathResult = runCatching {
             scrambledUrl
-                .let { it.replace("_x236", "d").replace("_x945", "g") }
-                .let { it.substring(0, it.length - (if (containsS0) 3 else 6)) }
+                .let { it.substring(0, (if (containsS0_v2) it.indexOf("=s0?") else it.indexOf("=s1600?"))) }
                 .let { it.substring(4, 22) + it.substring(25) }
                 .let { it.substring(0, it.length - 6) + it[it.length - 2] + it[it.length - 1] }
                 .let { Base64.decode(it, Base64.DEFAULT).toString(Charsets.UTF_8) }
                 .let { it.substring(0, 13) + it.substring(17) }
                 .let { it.substring(0, it.length - 2) + if (containsS0) "=s0" else "=s1600" }
+                .let { it + x }
         }
 
         val imagePath = imagePathResult.getOrNull()
